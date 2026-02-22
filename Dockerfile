@@ -15,4 +15,4 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY . /app
 
-CMD ["sh", "-c", "python scripts/ensure_weights.py && python dummy_server.py"]
+CMD ["sh", "-c", "python scripts/ensure_weights.py && python -m uvicorn api.app:app --host 0.0.0.0 --port ${PORT:-8000}"]
