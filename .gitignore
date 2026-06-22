@@ -3,3 +3,5 @@
 runs/
 *.pt
 *.pth
+*.onnx
+onnx_upload/

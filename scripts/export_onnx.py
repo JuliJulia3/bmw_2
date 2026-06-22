@@ -23,6 +23,9 @@ import timm
 ROOT = Path(__file__).resolve().parent.parent
 RUNS_DIR = ROOT / "runs" / "bikes_ensemble"
 META_PATH = ROOT / "api" / "onnx_meta.json"
+# Upload-ready ONNX files land here with their flat release names so they can
+# be dragged straight into the GitHub release without colliding.
+UPLOAD_DIR = ROOT / "onnx_upload"
 
 MODEL_KEYS = ["m1_convnext", "m2_effnetb0", "m3_vit_small"]
 OPSET = 17
@@ -60,7 +63,8 @@ def export_one(model_key: str) -> dict:
     model.load_state_dict(ckpt["state_dict"], strict=True)
     model.eval()
 
-    out_path = RUNS_DIR / model_key / "best.onnx"
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = UPLOAD_DIR / f"{model_key}_best.onnx"
     dummy = torch.randn(1, 3, img_size, img_size)
 
     # Dynamic batch axis: multi-crop TTA feeds k images as one batch.
@@ -83,8 +87,9 @@ def main():
     meta = {mk: export_one(mk) for mk in MODEL_KEYS}
     META_PATH.write_text(json.dumps(meta, indent=2), encoding="utf-8")
     print(f"Wrote metadata: {META_PATH}")
-    print("\nNext: upload the three best.onnx files to your GitHub release,")
-    print("then point URL_M*_BEST at them and commit api/onnx_meta.json.")
+    print(f"\nUpload-ready ONNX files are in: {UPLOAD_DIR}")
+    print("Next: drag all 3 files from that folder into the weights-v2 GitHub")
+    print("release, then commit api/onnx_meta.json and push.")
 
 
 if __name__ == "__main__":
