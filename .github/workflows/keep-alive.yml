@@ -1,0 +1,20 @@
+name: Keep Render service awake
+
+# Render's free tier spins a service down after ~15 min of inactivity, and the
+# cold start (re-downloading weights + reloading models) is slow. This pings
+# /health every 10 minutes so the instance never idles long enough to sleep.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          code=$(curl -s -m 60 -o /dev/null -w "%{http_code}" https://bmw-2-1.onrender.com/health)
+          echo "health -> HTTP $code"
+          # Don't fail the workflow on a transient blip; the next run retries.
+          if [ "$code" != "200" ]; then echo "::warning::health returned $code"; fi
