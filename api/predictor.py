@@ -1,9 +1,10 @@
 # predictor.py
 from __future__ import annotations
 
+import gc
 import io
 from dataclasses import dataclass
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List
 
 import torch
 from PIL import Image
@@ -37,11 +38,14 @@ class EnsemblePredictor:
         # must match your training run folders
         self.model_keys = ["m1_convnext", "m2_effnetb0", "m3_vit_small"]
 
-        # store (model, class_names, img_size) per key
-        self.loaded: Dict[str, Tuple[torch.nn.Module, List[str], int]] = {}
-        self._load_models()
+    @torch.no_grad()
+    def predict_pil(self, img: Image.Image) -> Prediction:
+        per_model: Dict[str, Any] = {}
 
-    def _load_models(self):
+        # Load one model at a time, run it, then free it before loading the
+        # next. Peak memory stays at ~1 model instead of 3, which keeps the
+        # full ensemble within small instances (e.g. Render 512Mi). The cost
+        # is re-reading each checkpoint from disk on every request.
         for mk in self.model_keys:
             model, class_names, img_size, _ckpt_path = load_best(mk, self.device)
 
@@ -51,20 +55,18 @@ class EnsemblePredictor:
                     f"Class mismatch for {mk}: ckpt={class_names} vs config={self.class_names}"
                 )
 
-            self.loaded[mk] = (model, class_names, img_size)
-
-    @torch.no_grad()
-    def predict_pil(self, img: Image.Image) -> Prediction:
-        per_model: Dict[str, Any] = {}
-
-        for mk, (model, class_names, img_size) in self.loaded.items():
-            pred, conf, margin, probs = predict_with_model(
-                model=model,
-                class_names=class_names,
-                img=img,
-                img_size=img_size,
-                device=self.device,
-            )
+            try:
+                pred, conf, margin, probs = predict_with_model(
+                    model=model,
+                    class_names=class_names,
+                    img=img,
+                    img_size=img_size,
+                    device=self.device,
+                )
+            finally:
+                # release the model before loading the next one
+                del model
+                gc.collect()
 
             # CRITICAL: keep probs so manager_decision fusion + thresholds behave the same
             per_model[mk] = {
