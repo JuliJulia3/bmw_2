@@ -154,10 +154,13 @@ class EnsemblePredictor:
 
         self.meta: Dict[str, Dict] = json.loads(META_PATH.read_text(encoding="utf-8"))
 
-        # ONNX Runtime sessions are lightweight enough to keep all loaded.
+        # Keep all sessions loaded, but minimise resident memory for a 512MB
+        # instance: single-threaded, and no CPU arena (the arena reserves and
+        # holds large blocks that push RSS over the limit).
         so = ort.SessionOptions()
         so.intra_op_num_threads = 1
         so.inter_op_num_threads = 1
+        so.enable_cpu_mem_arena = False
 
         self.sessions: Dict[str, ort.InferenceSession] = {}
         for mk in self.model_keys:
@@ -183,8 +186,16 @@ class EnsemblePredictor:
 
         sess = self.sessions[mk]
         input_name = sess.get_inputs()[0].name
-        logits_k = sess.run(None, {input_name: x.astype(np.float32)})[0]  # [N, C]
-        logits = logits_k.mean(axis=0)
+
+        # Run crops ONE AT A TIME (batch=1) and average the logits. This is
+        # numerically identical to a single batched forward but keeps peak
+        # activation memory ~Nx smaller, which matters on a 512MB instance.
+        logits_sum = None
+        for i in range(x.shape[0]):
+            xi = x[i:i + 1].astype(np.float32)            # [1,3,H,W]
+            li = sess.run(None, {input_name: xi})[0][0]   # [C]
+            logits_sum = li if logits_sum is None else logits_sum + li
+        logits = logits_sum / x.shape[0]
         probs = _softmax(logits)
 
         idx = int(np.argmax(probs))
