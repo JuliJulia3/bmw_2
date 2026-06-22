@@ -8,11 +8,8 @@ BASE.mkdir(parents=True, exist_ok=True)
 
 FILES = {
     BASE / "m1_convnext" / "best.pt": os.getenv("URL_M1_BEST"),
-    BASE / "m1_convnext" / "last.pt": os.getenv("URL_M1_LAST"),
     BASE / "m2_effnetb0" / "best.pt": os.getenv("URL_M2_BEST"),
-    BASE / "m2_effnetb0" / "last.pt": os.getenv("URL_M2_LAST"),
     BASE / "m3_vit_small" / "best.pt": os.getenv("URL_M3_BEST"),
-    BASE / "m3_vit_small" / "last.pt": os.getenv("URL_M3_LAST"),
 }
 
 def download(url: str, out_path: Path):
