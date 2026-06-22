@@ -68,6 +68,10 @@ def export_one(model_key: str) -> dict:
     dummy = torch.randn(1, 3, img_size, img_size)
 
     # Dynamic batch axis: multi-crop TTA feeds k images as one batch.
+    # dynamo=False uses the legacy TorchScript exporter, which embeds all
+    # weights inline as a single self-contained .onnx file. (The dynamo
+    # exporter splits weights into an external .onnx.data file, which would
+    # leave these uploads weightless.)
     torch.onnx.export(
         model,
         dummy,
@@ -77,6 +81,7 @@ def export_one(model_key: str) -> dict:
         dynamic_axes={"input": {0: "batch"}, "logits": {0: "batch"}},
         opset_version=OPSET,
         do_constant_folding=True,
+        dynamo=False,
     )
     print(f"Exported {model_key}: {out_path} (arch={arch}, img_size={img_size})")
 
