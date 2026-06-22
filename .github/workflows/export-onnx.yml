@@ -28,7 +28,8 @@ jobs:
           # torch AND torchvision must come from the same CPU index as a matched
           # pair, otherwise timm's torchvision import fails (torchvision::nms).
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-          pip install timm onnx
+          # onnxscript + onnxruntime are required by torch's dynamo ONNX exporter.
+          pip install timm onnx onnxscript onnxruntime
 
       - name: Export to ONNX
         run: python scripts/export_onnx.py
