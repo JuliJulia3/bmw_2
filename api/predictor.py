@@ -8,6 +8,10 @@ from typing import Dict, Any, List, Tuple
 import torch
 from PIL import Image
 
+# Keep memory low on small instances (e.g. Render 512Mi): a single thread
+# avoids per-thread allocator arenas that inflate RSS.
+torch.set_num_threads(1)
+
 from bikes_config import CLASSES, MIN_CONF_FINAL, MIN_MARGIN_FINAL
 from bikes_lib import get_device_cpu
 
@@ -95,4 +99,13 @@ class EnsemblePredictor:
         return self.predict_pil(img)
 
 
-predictor = EnsemblePredictor()
+_predictor: EnsemblePredictor | None = None
+
+
+def get_predictor() -> EnsemblePredictor:
+    """Lazily build the predictor on first use so the web process can bind
+    its port before paying the (heavy) model-loading cost."""
+    global _predictor
+    if _predictor is None:
+        _predictor = EnsemblePredictor()
+    return _predictor

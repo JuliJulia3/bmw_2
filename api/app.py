@@ -5,7 +5,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from PIL import UnidentifiedImageError
 
-from .predictor import predictor
+from .predictor import get_predictor
 
 app = FastAPI(title="BMW_2 Bike Prediction API")
 
@@ -28,7 +28,7 @@ async def predict_bmw(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Empty file uploaded.")
 
     try:
-        pred = predictor.predict_bytes(data)
+        pred = get_predictor().predict_bytes(data)
     except UnidentifiedImageError:
         raise HTTPException(
             status_code=400,
