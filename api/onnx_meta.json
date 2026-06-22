@@ -1,0 +1,29 @@
+{
+  "m1_convnext": {
+    "arch": "convnext_tiny.fb_in22k_ft_in1k",
+    "class_names": [
+      "r1300gs",
+      "r1300gs_adventure",
+      "other"
+    ],
+    "img_size": 224
+  },
+  "m2_effnetb0": {
+    "arch": "efficientnet_b0.ra_in1k",
+    "class_names": [
+      "r1300gs",
+      "r1300gs_adventure",
+      "other"
+    ],
+    "img_size": 224
+  },
+  "m3_vit_small": {
+    "arch": "vit_small_patch16_224.augreg_in21k_ft_in1k",
+    "class_names": [
+      "r1300gs",
+      "r1300gs_adventure",
+      "other"
+    ],
+    "img_size": 224
+  }
+}
