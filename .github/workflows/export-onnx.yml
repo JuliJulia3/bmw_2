@@ -25,7 +25,9 @@ jobs:
       - name: Install dependencies (CPU torch + timm + onnx)
         run: |
           python -m pip install --upgrade pip
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          # torch AND torchvision must come from the same CPU index as a matched
+          # pair, otherwise timm's torchvision import fails (torchvision::nms).
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           pip install timm onnx
 
       - name: Export to ONNX
