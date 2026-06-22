@@ -7,9 +7,9 @@ BASE = Path("runs/bikes_ensemble")
 BASE.mkdir(parents=True, exist_ok=True)
 
 FILES = {
-    BASE / "m1_convnext" / "best.pt": os.getenv("URL_M1_BEST"),
-    BASE / "m2_effnetb0" / "best.pt": os.getenv("URL_M2_BEST"),
-    BASE / "m3_vit_small" / "best.pt": os.getenv("URL_M3_BEST"),
+    BASE / "m1_convnext" / "best.onnx": os.getenv("URL_M1_BEST"),
+    BASE / "m2_effnetb0" / "best.onnx": os.getenv("URL_M2_BEST"),
+    BASE / "m3_vit_small" / "best.onnx": os.getenv("URL_M3_BEST"),
 }
 
 def download(url: str, out_path: Path):
