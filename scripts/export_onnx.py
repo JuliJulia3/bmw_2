@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Export the trained PyTorch checkpoints to ONNX.
 
-Run this LOCALLY (where torch + timm are installed). It reads each
-runs/bikes_ensemble/<key>/best.pt, rebuilds the timm model, and writes:
+Run this LOCALLY (only needs: pip install torch timm). It will download each
+best.pt from the GitHub release if it is not already present, rebuild the
+timm model, and write:
 
   runs/bikes_ensemble/<key>/best.onnx   <- upload these to your GitHub release
   api/onnx_meta.json                    <- commit this to the repo
@@ -13,6 +14,7 @@ fits comfortably in a 512MB instance.
 from __future__ import annotations
 
 import json
+import urllib.request
 from pathlib import Path
 
 import torch
@@ -25,11 +27,29 @@ META_PATH = ROOT / "api" / "onnx_meta.json"
 MODEL_KEYS = ["m1_convnext", "m2_effnetb0", "m3_vit_small"]
 OPSET = 17
 
+# Where to grab the original .pt checkpoints if they're not on disk locally.
+RELEASE_BASE = "https://github.com/JuliJulia3/bmw_2/releases/download/weights-v2"
+PT_URLS = {
+    "m1_convnext": f"{RELEASE_BASE}/m1_convnext_best.pt",
+    "m2_effnetb0": f"{RELEASE_BASE}/m2_effnetb0_best.pt",
+    "m3_vit_small": f"{RELEASE_BASE}/m3_vit_small_best.pt",
+}
+
+
+def ensure_pt(model_key: str) -> Path:
+    pt_path = RUNS_DIR / model_key / "best.pt"
+    if pt_path.exists() and pt_path.stat().st_size > 0:
+        return pt_path
+    pt_path.parent.mkdir(parents=True, exist_ok=True)
+    url = PT_URLS[model_key]
+    print(f"Downloading {url} -> {pt_path}")
+    with urllib.request.urlopen(url) as r, open(pt_path, "wb") as f:
+        f.write(r.read())
+    return pt_path
+
 
 def export_one(model_key: str) -> dict:
-    ckpt_path = RUNS_DIR / model_key / "best.pt"
-    if not ckpt_path.exists():
-        raise FileNotFoundError(f"Missing checkpoint: {ckpt_path}")
+    ckpt_path = ensure_pt(model_key)
 
     ckpt = torch.load(ckpt_path, map_location="cpu")
     arch = ckpt["arch"]
@@ -63,6 +83,8 @@ def main():
     meta = {mk: export_one(mk) for mk in MODEL_KEYS}
     META_PATH.write_text(json.dumps(meta, indent=2), encoding="utf-8")
     print(f"Wrote metadata: {META_PATH}")
+    print("\nNext: upload the three best.onnx files to your GitHub release,")
+    print("then point URL_M*_BEST at them and commit api/onnx_meta.json.")
 
 
 if __name__ == "__main__":
